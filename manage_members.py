@@ -4,7 +4,6 @@
 import os
 import argparse
 import yaml
-from dotmap import DotMap
 from skpy import Skype, SkypeAuthException
 
 def make_args():
@@ -20,10 +19,8 @@ def read_credentials(path=None):
     """ Read Skype credentials """
     if not path:
         path = os.path.expanduser("~/.skype_credentials.yaml")
-
     with open(path, "r") as f:
         data = yaml.safe_load(f)
-
     return data
 
 
@@ -31,10 +28,8 @@ def read_channels(path=None):
     """ Read channels list """
     if not path:
         path = os.path.expanduser("~/.skype_channels.yaml")
-
     with open(path, "r") as f:
         data = yaml.safe_load(f)
-
     return data
 
 
@@ -42,7 +37,6 @@ def add_user_to_channels(user_id, skype_client, channels,
                          verify_channels=False,
                          add_as_admin=False):
     """ Add user to list of channels """
-
     for chat_id, topic in channels.items():
         chat = skype_client.chats.chat(chat_id)
         # Right now skpy returns truncated topics for channels
@@ -62,7 +56,6 @@ def remove_user_from_channels(user_id, skype_client, channels,
                               verify_channels=False,
                               remove_admin=False):
     """ Remove user from channels """
-
     for chat_id, topic in channels.items():
         chat = skype_client.chats.chat(chat_id)
         if verify_channels and topic != chat.topic:
@@ -82,28 +75,15 @@ def remove_user_from_channels(user_id, skype_client, channels,
         chat.removeMember(user_id)
 
 
-def action_on_channel(group_chat, user_id, action="add"):
-    """ Add or remove user to/from channel """
-    #TODO: check user not admin before remove it
-    #TODO: add option to override this check
-
-    if action == "add":
-        group_chat.addMember(user_id)
-    elif action == "remove":
-        group_chat.removeMember(user_id)
-    else:
-        raise NotImplementedError("Unknown action " + action)
-
-
 def skype_auth():
     """ Use authorization token or make new one """
     sk = Skype(connect=False)   #pylint: disable=invalid-name
     sk.conn.setTokenFile(".tokens-app")
     try:
         sk.conn.readToken()
-    except SkypeAuthException:
-        creds = DotMap(read_credentials())
-        sk.conn.setUserPwd(creds.username, creds.password)
+    except (SkypeAuthException, FileNotFoundError):
+        creds = read_credentials()
+        sk.conn.setUserPwd(creds['username'], creds['password'])
         sk.conn.getSkypeToken()
 
     return sk
