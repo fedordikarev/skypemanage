@@ -13,6 +13,7 @@ def make_args():
     parser.add_argument('user_id', help="User ID: either skype nickname, live account or e-mail")
     parser.add_argument('--admin', help="Add as admin user or force remove of admin user",
                         action='store_true')
+    parser.add_argument('--message', type=str, help="Show this message in chat")
     return parser.parse_args()
 
 def read_credentials(path=None):
@@ -35,8 +36,12 @@ def read_channels(path=None):
 
 def add_user_to_channels(user_id, skype_client, channels,
                          verify_channels=False,
-                         add_as_admin=False):
+                         add_as_admin=False,
+                         welcome_message=None):
     """ Add user to list of channels """
+    if not welcome_message:
+        welcome_message = u"Приветствуем нового {} {} в этом чате".format(
+            "админа" if add_as_admin else "пользователя", user_id)
     for chat_id, topic in channels.items():
         chat = skype_client.chats.chat(chat_id)
         # Right now skpy returns truncated topics for channels
@@ -46,16 +51,19 @@ def add_user_to_channels(user_id, skype_client, channels,
                 chat_id, chat.topic, topic))
             continue
         chat.addMember(user_id, admin=add_as_admin)
-        if add_as_admin:
-            chat.sendMsg(u"Приветствуем нового админа {} в этом чате!".format(user_id))
-        else:
-            chat.sendMsg(u"Приветствуем нового пользователя {} в этом чате!".format(user_id))
+        chat.sendMsg(welcome_message)
 
 
 def remove_user_from_channels(user_id, skype_client, channels,
                               verify_channels=False,
-                              remove_admin=False):
+                              remove_admin=False,
+                              bye_message=None):
     """ Remove user from channels """
+    if not bye_message:
+        bye_message = "Прощаемся с {} в этом чате!".format(user_id)
+
+    skipped_count = 0
+
     for chat_id, topic in channels.items():
         chat = skype_client.chats.chat(chat_id)
         if verify_channels and topic != chat.topic:
@@ -69,10 +77,14 @@ def remove_user_from_channels(user_id, skype_client, channels,
                     user_is_admin = True
                     break
             if user_is_admin:
-                print("User has admin role on channel '{}' ({})".format(chat_id, chat.topic))
+                print("Skip: user has admin role on channel '{}' ({})".format(chat.topic, chat_id))
+                skipped_count += 1
                 continue
-        chat.sendMsg(u"Прощаемся с {} в этом чате!".format(user_id))
+        chat.sendMsg(bye_message)
         chat.removeMember(user_id)
+
+    if skipped_count > 0:
+        print("Use --admin flag to remove user from skipped chats")
 
 
 def skype_auth():
@@ -96,9 +108,11 @@ def main():
     channels = read_channels()
 
     if args.action == "add":
-        add_user_to_channels(args.user_id, sk, channels, add_as_admin=args.admin)
+        add_user_to_channels(args.user_id, sk, channels,
+                             add_as_admin=args.admin, welcome_message=args.message)
     elif args.action == "remove":
-        remove_user_from_channels(args.user_id, sk, channels, remove_admin=args.admin)
+        remove_user_from_channels(args.user_id, sk, channels,
+                                  remove_admin=args.admin, bye_message=args.message)
     else:
         print("Not implemented yet")
 
