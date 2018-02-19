@@ -9,7 +9,7 @@ from skpy import Skype, SkypeAuthException
 def make_args():
     """ Build cli args """
     parser = argparse.ArgumentParser(description="Manage Skype channels")
-    parser.add_argument('action', choices=['add', 'remove'])
+    parser.add_argument('action', choices=['add', 'remove', 'list'])
     parser.add_argument('user_id', help="User ID: either skype nickname, live account or e-mail")
     parser.add_argument('--admin', help="Add as admin user or force remove of admin user",
                         action='store_true')
@@ -86,6 +86,21 @@ def remove_user_from_channels(user_id, skype_client, channels,
     if skipped_count > 0:
         print("Use --admin flag to remove user from skipped chats")
 
+def list_recent(skype_client, max_count=1):
+    """ List recent chats """
+    recent = skype_client.chats.recent()
+    count = 0
+    while(recent and count < max_count):
+        for chat_id in recent:
+            chat = skype_client.chats.chat(chat_id)
+            try:
+                display_name = chat.topic
+            except AttributeError:
+                display_name = " ".join([str(chat.user.name.first), str(chat.user.name.last)])
+            print(chat_id, display_name)
+        recent = skype_client.chats.recent()
+        count += 1
+
 
 def skype_auth():
     """ Use authorization token or make new one """
@@ -113,6 +128,8 @@ def main():
     elif args.action == "remove":
         remove_user_from_channels(args.user_id, sk, channels,
                                   remove_admin=args.admin, bye_message=args.message)
+    elif args.action == "list":
+        list_recent(sk, int(args.user_id)) # user_id actually is count for "list" action
     else:
         print("Not implemented yet")
 
