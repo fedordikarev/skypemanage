@@ -5,4 +5,4 @@ idna==2.6
 pyaml==17.12.1
 requests==2.18.4
 SkPy==0.8.1
-urllib3==1.22
+urllib3==1.24.2
