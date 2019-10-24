@@ -3,6 +3,6 @@ certifi==2018.1.18
 chardet==3.0.4
 idna==2.6
 pyaml==17.12.1
-requests==2.18.4
+requests==2.20.0
 SkPy==0.8.1
 urllib3==1.24.2
